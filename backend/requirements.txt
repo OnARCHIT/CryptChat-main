@@ -1,16 +1,8 @@
-# Core web framework
-Flask==2.3.3
+Flask==3.0.3
 flask-cors==3.0.10
+gunicorn==22.0.0
 
-# Machine learning
-tensorflow==2.20.0
+tensorflow-cpu==2.16.1
 numpy==1.26.4
 pandas==2.2.2
-
-# Utilities
-requests==2.32.3
-gunicorn==21.2.0
-
-# (Optional) if you use scikit-learn or image processing:
-# scikit-learn==1.5.2
-# pillow==10.4.0
+joblib==1.4.2
