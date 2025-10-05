@@ -9,7 +9,7 @@ keras==2.15.0
 gdown==4.6.5
 
 # Optional: For handling CORS (if frontend will call API)
-flask-cors==3.1.2
+flask-cors==3.0.10
 
 # Optional: Gunicorn for production server on Render
 gunicorn==21.2.0
