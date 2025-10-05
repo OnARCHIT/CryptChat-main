@@ -73,7 +73,7 @@ def scan_file():
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     # Placeholder — replace with real features
-    features = np.array([[0,0,0,0]])
+    features = np.array([[0, 0, 0, 0]])
     score = file_model.predict_proba(features)[0][1]
     phishing = score > 0.5
     return jsonify({"score": float(score), "phishing": phishing})
