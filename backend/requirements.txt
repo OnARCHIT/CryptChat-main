@@ -1,0 +1,18 @@
+# Web framework
+Flask==2.3.3
+
+# Keras and TensorFlow for model loading
+tensorflow==2.15.0
+keras==2.15.0
+
+# Download from Google Drive
+gdown==4.6.5
+
+# Optional: For handling CORS (if frontend will call API)
+flask-cors==3.1.2
+
+# Optional: Gunicorn for production server on Render
+gunicorn==21.2.0
+
+# Optional: Environment variables
+python-dotenv==1.0.1

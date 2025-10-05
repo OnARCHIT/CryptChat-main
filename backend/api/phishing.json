@@ -1,0 +1,14 @@
+{
+  "phishing": true,
+  "scores": {
+    "url_score": 0.12,
+    "image_score": 0.88,
+    "file_score": 0.76
+  },
+  "explanation": "Detected hidden redirect in image + url suspicious domain",
+  "details": {
+    "url_checks": { "domainReputation": "bad", "blacklist": true },
+    "image_checks": { "steg_detected": true, "steg_confidence": 0.84 },
+    "file_checks": { "embedded_url_count": 2 }
+  }
+}

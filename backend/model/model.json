@@ -1,0 +1,135 @@
+{
+  "format": "layers-model",
+  "generatedBy": "TensorFlow.js Converter",
+  "convertedBy": "Assistant Placeholder",
+  "modelTopology": {
+    "keras_version": "2.14.0",
+    "backend": "tensorflow",
+    "model_config": {
+      "class_name": "Sequential",
+      "config": [
+        {
+          "class_name": "Dense",
+          "config": {
+            "name": "dense",
+            "trainable": true,
+            "batch_input_shape": [
+              null,
+              10
+            ],
+            "dtype": "float32",
+            "units": 16,
+            "activation": "relu",
+            "use_bias": true,
+            "kernel_initializer": {
+              "class_name": "GlorotUniform",
+              "config": {
+                "seed": null
+              }
+            },
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {}
+            }
+          }
+        },
+        {
+          "class_name": "Dense",
+          "config": {
+            "name": "dense_1",
+            "trainable": true,
+            "dtype": "float32",
+            "units": 8,
+            "activation": "relu",
+            "use_bias": true,
+            "kernel_initializer": {
+              "class_name": "GlorotUniform",
+              "config": {
+                "seed": null
+              }
+            },
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {}
+            }
+          }
+        },
+        {
+          "class_name": "Dense",
+          "config": {
+            "name": "dense_2",
+            "trainable": true,
+            "dtype": "float32",
+            "units": 3,
+            "activation": "softmax",
+            "use_bias": true,
+            "kernel_initializer": {
+              "class_name": "GlorotUniform",
+              "config": {
+                "seed": null
+              }
+            },
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {}
+            }
+          }
+        }
+      ]
+    }
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "group-shard1.bin"
+      ],
+      "weights": [
+        {
+          "name": "dense/kernel",
+          "shape": [
+            10,
+            16
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense/bias",
+          "shape": [
+            16
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_1/kernel",
+          "shape": [
+            16,
+            8
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_1/bias",
+          "shape": [
+            8
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_2/kernel",
+          "shape": [
+            8,
+            3
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_2/bias",
+          "shape": [
+            3
+          ],
+          "dtype": "float32"
+        }
+      ]
+    }
+  ]
+}

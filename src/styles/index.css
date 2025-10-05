@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{ --bg:#030712; }
+html,body,#root{height:100%}
+body{ background-color: var(--bg); color: #e6eef2; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+
+/* Neon text utility */
+.neon-text{ text-shadow: 0 0 6px rgba(20,241,149,0.55), 0 0 16px rgba(20,241,149,0.12); }
+
+html { scroll-behavior: smooth; }
+
+/* Ensure the canvas displays and blends with theme */
+canvas { display:block !important; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height:8px }
+::-webkit-scrollbar-thumb { background-color: rgba(20,241,149,0.18); border-radius: 9999px }
+
+/* Small-screen chatbox tweak */
+@media (max-width: 640px){
+  aside.fixed.bottom-6.right-6.w-80 { right: 12px; left: 12px; width: auto; bottom: 12px; }
+}
+.news-card { will-change: transform; }
+.news-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 8px 30px rgba(2,6,23,0.6); }

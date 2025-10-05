@@ -1,0 +1,13 @@
+# Allow all search engines to crawl the main site
+User-agent: *
+Disallow: /api/
+Disallow: /server/
+Disallow: /models/
+Disallow: /assets/frame_*.jpg
+Disallow: /assets/phishing-highlight.mp4
+
+# Sitemap (optional, if you have one)
+# Sitemap: https://yourdomain.com/sitemap.xml
+
+# Crawl-delay (optional)
+Crawl-delay: 5
