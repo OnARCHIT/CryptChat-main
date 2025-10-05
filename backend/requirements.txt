@@ -2,7 +2,7 @@
 Flask==2.3.3
 
 # Keras and TensorFlow for model loading
-tensorflow==2.15.0
+tensorflow==2.20.0
 keras==2.15.0
 
 # Download from Google Drive
