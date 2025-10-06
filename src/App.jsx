@@ -11,7 +11,7 @@ import HeadlineTicker from "./components/HeadlineTicker.jsx";
 import LinkInterceptor from "./components/LinkInterceptor.jsx";
 import MediaPanel from "./components/MediaPanel.jsx";
 import NewsFeed from "./components/NewsFeed.jsx";
-import PhishingChallenges from "./components/PhishingChallenge.jsx";
+import PhishingChallenges from "./components/PhishingChallenge.jsx"; 
 import PhishingRadar from "./components/PhishRadar.jsx";
 import ScanPanel from "./components/ScanPanel.jsx";
 
@@ -25,7 +25,7 @@ export default function App() {
   const [image, setImage] = useState(null);
   const [imageResult, setImageResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState("dark"); // 🌗 theme toggle
+  const [theme, setTheme] = useState("dark");
 
   const scrollRef = useRef(null);
   const backend = "https://cryptchat2.onrender.com/";
@@ -33,19 +33,21 @@ export default function App() {
   // === Theme Toggle ===
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
-  // === Scroll animations ===
+  // === Scroll Animations ===
   useEffect(() => {
     const sections = scrollRef.current?.querySelectorAll(".section");
-    sections?.forEach((sec) => {
+    sections?.forEach((sec, i) => {
       gsap.from(sec, {
         opacity: 0,
-        y: 50,
-        duration: 1,
+        y: 80,
+        duration: 1.2,
+        ease: "power2.out",
         scrollTrigger: {
           trigger: sec,
           start: "top 85%",
-          toggleActions: "play none none none",
+          toggleActions: "play none none reverse",
         },
+        delay: i * 0.1,
       });
     });
   }, []);
@@ -53,7 +55,7 @@ export default function App() {
   // === Clipboard Monitoring (Extension Integration) ===
   useEffect(() => {
     startClipboardMonitor((text) => {
-      console.log("Clipboard content detected:", text);
+      console.log("📋 Clipboard detected:", text);
       if (window.helperAPI) {
         window.helperAPI.sendClipboardData(text);
       }
@@ -62,14 +64,14 @@ export default function App() {
 
   // === URL Scan ===
   const handleUrlScan = async () => {
-    if (!url) return alert("Please enter a URL!");
+    if (!url.trim()) return alert("Please enter a URL!");
     try {
       setLoading(true);
       const res = await axios.post(`${backend}/scan/url`, { url });
       setUrlResult(res.data);
-
-      if (window.helperAPI) window.helperAPI.notify("URL scan complete!");
-    } catch {
+      window.helperAPI?.notify("URL scan complete!");
+    } catch (err) {
+      console.error(err);
       alert("Error scanning URL!");
     } finally {
       setLoading(false);
@@ -87,9 +89,9 @@ export default function App() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setImageResult(res.data);
-
-      if (window.helperAPI) window.helperAPI.notify("Image scan complete!");
-    } catch {
+      window.helperAPI?.notify("Image scan complete!");
+    } catch (err) {
+      console.error(err);
       alert("Error scanning image!");
     } finally {
       setLoading(false);
@@ -108,19 +110,23 @@ export default function App() {
       ref={scrollRef}
       className={`relative min-h-screen w-full overflow-x-hidden transition-colors duration-500 bg-gradient-to-b ${bgGradient} ${textColor}`}
     >
-      {/* Background Glow */}
+      {/* === Background Glow === */}
       {isDark && (
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(56,189,248,0.15),transparent_60%)] pointer-events-none" />
       )}
 
-      {/* Header with Theme Toggle */}
-      <header className="flex justify-between items-center p-6 sticky top-0 z-50 backdrop-blur-xl bg-black/30 border-b border-gray-800">
-        <h1 className="text-2xl font-extrabold tracking-tight">
-          🔐 CryptChat
-        </h1>
+      {/* === Header === */}
+      <header className="flex justify-between items-center p-6 sticky top-0 z-50 backdrop-blur-xl bg-black/40 border-b border-gray-800">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="logo" className="w-10 h-10" />
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#14F195]">
+            CryptChat
+          </h1>
+        </div>
+
         <button
           onClick={toggleTheme}
-          className={`px-4 py-2 rounded-full font-semibold transition-all ${
+          className={`px-4 py-2 rounded-full font-semibold shadow transition-all ${
             isDark
               ? "bg-blue-600 hover:bg-blue-700 text-white"
               : "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
@@ -130,32 +136,31 @@ export default function App() {
         </button>
       </header>
 
-      {/* Hero */}
-      <section className="section text-center py-20 space-y-6">
+      {/* === Hero Section === */}
+      <section className="section text-center py-24 px-6">
         <motion.h1
-          className="text-6xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-lg"
+          className="text-6xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent"
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
         >
           AI-Driven Phishing Defense Agent
         </motion.h1>
-
         <motion.p
-          className={`max-w-2xl mx-auto text-lg ${
+          className={`max-w-2xl mx-auto mt-6 text-lg ${
             isDark ? "text-gray-300" : "text-gray-700"
           }`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, transition: { delay: 0.5 } }}
         >
-          Real-time interception, adaptive threat learning, and explainable AI
-          — integrated into your daily communication.
+          Real-time interception, adaptive threat learning, and explainable AI —
+          integrated seamlessly into your communication.
         </motion.p>
       </section>
 
-      {/* URL Scanner */}
+      {/* === URL Scanner === */}
       <section className="section flex justify-center py-12">
         <div
-          className={`p-6 rounded-2xl backdrop-blur-lg border shadow-lg w-full max-w-xl transition-all ${
+          className={`p-6 rounded-2xl backdrop-blur-lg border shadow-lg w-full max-w-xl ${
             isDark
               ? "bg-gray-900/70 border-gray-800"
               : "bg-white/70 border-gray-200"
@@ -167,7 +172,7 @@ export default function App() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Enter URL..."
-            className={`w-full p-3 rounded-lg mb-3 outline-none border transition ${
+            className={`w-full p-3 rounded-lg mb-3 border outline-none transition ${
               isDark
                 ? "bg-gray-800 text-white border-gray-700 focus:border-blue-500"
                 : "bg-white text-gray-900 border-gray-300 focus:border-blue-500"
@@ -201,10 +206,10 @@ export default function App() {
         </div>
       </section>
 
-      {/* Image Scanner */}
+      {/* === Image Scanner === */}
       <section className="section flex justify-center py-12">
         <div
-          className={`p-6 rounded-2xl backdrop-blur-lg border shadow-lg w-full max-w-xl transition-all ${
+          className={`p-6 rounded-2xl backdrop-blur-lg border shadow-lg w-full max-w-xl ${
             isDark
               ? "bg-gray-900/70 border-gray-800"
               : "bg-white/70 border-gray-200"
@@ -245,8 +250,8 @@ export default function App() {
         </div>
       </section>
 
-      {/* Interactive AI Modules */}
-      <section className="section w-full max-w-6xl mx-auto space-y-16 py-20 px-6">
+      {/* === Interactive AI Modules === */}
+      <section className="section w-full max-w-6xl mx-auto space-y-20 py-20 px-6">
         <HeadlineTicker />
         <MediaPanel />
         <NewsFeed />
@@ -258,10 +263,12 @@ export default function App() {
         <FileInterceptor />
       </section>
 
-      {/* Footer */}
+      {/* === Footer === */}
       <footer
-        className={`py-8 text-center border-t transition ${
-          isDark ? "border-gray-800 text-gray-500" : "border-gray-200 text-gray-600"
+        className={`py-8 text-center border-t ${
+          isDark
+            ? "border-gray-800 text-gray-500"
+            : "border-gray-200 text-gray-600"
         }`}
       >
         © {new Date().getFullYear()} CryptChat | AI Phishing Defense Agent
