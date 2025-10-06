@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 import tensorflow as tf
+from keras.layers import TFSMLayer
 import numpy as np
 from tensorflow.keras.preprocessing import image
 import joblib
@@ -8,12 +9,13 @@ import os
 app = Flask(__name__)
 
 # ==== Paths ====
-URL_MODEL_PATH = "model/url_model"
+URL_MODEL_PATH = "model/url_model"  # SavedModel folder
 IMAGE_MODEL_PATH = "model/image_model/phish_image_model_int8.tflite"
 FILE_MODEL_PATH = "model/file_model/file_model.pkl"
 
 # ==== Load Models ====
-url_model = tf.keras.models.load_model(URL_MODEL_PATH)
+# Wrap the SavedModel using TFSMLayer for inference
+url_model_layer = TFSMLayer(URL_MODEL_PATH, call_endpoint="serving_default")
 
 image_interpreter = tf.lite.Interpreter(model_path=IMAGE_MODEL_PATH)
 image_interpreter.allocate_tensors()
@@ -33,7 +35,7 @@ def preprocess_url(url):
     x = [ord(c) for c in url[:max_len]]
     if len(x) < max_len:
         x += [0] * (max_len - len(x))
-    return np.array([x])
+    return np.array([x], dtype=np.float32)
 
 def predict_image(img_file):
     img = image.load_img(img_file, target_size=(224, 224))
@@ -60,7 +62,7 @@ def scan_url():
     if not data or "url" not in data:
         return jsonify({"error": "Missing URL"}), 400
     x = preprocess_url(data["url"])
-    score = float(url_model.predict(x)[0][0])
+    score = float(url_model_layer(x).numpy()[0][0])
     phishing = score > 0.5
     return jsonify({"score": score, "phishing": phishing})
 
