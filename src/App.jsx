@@ -165,7 +165,7 @@ export default function App() {
         )}
       </div>
 
-      {/* === Game & Interactive Modules === */}
+        {/* === Game & Interactive Modules === */}
       <div className="section w-full max-w-4xl space-y-12">
         <HeadlineTicker />
         <MediaPanel />
@@ -173,3 +173,10 @@ export default function App() {
         <PhishingChallenges />
         <PhishingRadar />
         <ScanPanel />
+        <ChatBox />
+        <LinkInterceptor />
+        <FileInterceptor />
+      </div>
+    </div>
+  );
+}
