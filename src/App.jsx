@@ -15,7 +15,7 @@ import PhishingChallenges from "./components/PhishingChallenge.jsx";
 import PhishingRadar from "./components/PhishRadar.jsx";
 import ScanPanel from "./components/ScanPanel.jsx";
 
-import { startClipboardMonitor } from "./helper/utils/clipboardMonitor.js";
+import { startClipboardMonitor } from "./utils/clipboardMonitor.js";
 
 gsap.registerPlugin(ScrollTrigger);
 
