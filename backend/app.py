@@ -1,21 +1,28 @@
 from flask import Flask, request, jsonify, send_from_directory
-import tensorflow as tf
-from keras.layers import TFSMLayer
-import numpy as np
-from tensorflow.keras.preprocessing import image
-import joblib
 import os
+import numpy as np
+import joblib
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
+
+# ==== FORCE CPU & SUPPRESS LOGS ====
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Force CPU
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"   # Only errors, hide warnings
+tf.get_logger().setLevel('ERROR')
 
 app = Flask(__name__)
 
 # ==== Paths ====
-URL_MODEL_PATH = "model/url_model"  # SavedModel folder
+URL_MODEL_PATH = "model/url_model"  # Ensure this is .h5 or .keras file for Keras 3
 IMAGE_MODEL_PATH = "model/image_model/phish_image_model_int8.tflite"
 FILE_MODEL_PATH = "model/file_model/file_model.pkl"
 
 # ==== Load Models ====
-# Wrap the SavedModel using TFSMLayer for inference
-url_model_layer = TFSMLayer(URL_MODEL_PATH, call_endpoint="serving_default")
+try:
+    url_model = tf.keras.models.load_model(URL_MODEL_PATH)
+except Exception as e:
+    print(f"⚠️ Could not load URL model: {e}")
+    url_model = None
 
 image_interpreter = tf.lite.Interpreter(model_path=IMAGE_MODEL_PATH)
 image_interpreter.allocate_tensors()
@@ -35,7 +42,7 @@ def preprocess_url(url):
     x = [ord(c) for c in url[:max_len]]
     if len(x) < max_len:
         x += [0] * (max_len - len(x))
-    return np.array([x], dtype=np.float32)
+    return np.array([x])
 
 def predict_image(img_file):
     img = image.load_img(img_file, target_size=(224, 224))
@@ -58,11 +65,13 @@ def home():
 
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
+    if url_model is None:
+        return jsonify({"error": "URL model not loaded"}), 500
     data = request.get_json()
     if not data or "url" not in data:
         return jsonify({"error": "Missing URL"}), 400
     x = preprocess_url(data["url"])
-    score = float(url_model_layer(x).numpy()[0][0])
+    score = float(url_model.predict(x)[0][0])
     phishing = score > 0.5
     return jsonify({"score": score, "phishing": phishing})
 
