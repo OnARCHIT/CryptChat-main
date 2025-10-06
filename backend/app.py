@@ -1,28 +1,21 @@
 from flask import Flask, request, jsonify, send_from_directory
-import os
-import numpy as np
-import joblib
 import tensorflow as tf
+import keras
+import numpy as np
 from tensorflow.keras.preprocessing import image
+import os
 
-# ==== FORCE CPU & SUPPRESS LOGS ====
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Force CPU
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"   # Only errors, hide warnings
-tf.get_logger().setLevel('ERROR')
+# ==== Enable unsafe deserialization for Lambda layers ====
+keras.config.enable_unsafe_deserialization()
 
 app = Flask(__name__)
 
 # ==== Paths ====
-URL_MODEL_PATH = "model/url_model"  # Ensure this is .h5 or .keras file for Keras 3
-IMAGE_MODEL_PATH = "model/image_model/phish_image_model_int8.tflite"
-FILE_MODEL_PATH = "model/file_model/file_model.pkl"
+URL_MODEL_PATH = "model/url_model.keras"
+IMAGE_MODEL_PATH = "model/image_model/image_model_int8.tflite"
 
 # ==== Load Models ====
-try:
-    url_model = tf.keras.models.load_model(URL_MODEL_PATH)
-except Exception as e:
-    print(f"⚠️ Could not load URL model: {e}")
-    url_model = None
+url_model = tf.keras.models.load_model(URL_MODEL_PATH, compile=False)
 
 image_interpreter = tf.lite.Interpreter(model_path=IMAGE_MODEL_PATH)
 image_interpreter.allocate_tensors()
@@ -32,8 +25,6 @@ input_index = image_input["index"]
 output_index = image_output["index"]
 input_scale, input_zero_point = image_input["quantization"]
 output_scale, output_zero_point = image_output["quantization"]
-
-file_model = joblib.load(FILE_MODEL_PATH)
 
 # ==== Helper Functions ====
 def preprocess_url(url):
@@ -61,12 +52,10 @@ def predict_image(img_file):
 # ==== API Endpoints ====
 @app.route("/")
 def home():
-    return "✅ CryptChat Backend is Running! API endpoints: /scan/url, /scan/image, /scan/file"
+    return "✅ CryptChat Backend is Running! API endpoints: /scan/url, /scan/image"
 
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
-    if url_model is None:
-        return jsonify({"error": "URL model not loaded"}), 500
     data = request.get_json()
     if not data or "url" not in data:
         return jsonify({"error": "Missing URL"}), 400
@@ -82,16 +71,6 @@ def scan_image():
     score = predict_image(request.files["image"])
     phishing = score > 0.5
     return jsonify({"score": score, "phishing": phishing})
-
-@app.route("/scan/file", methods=["POST"])
-def scan_file():
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    # Placeholder — replace with real features
-    features = np.array([[0, 0, 0, 0]])
-    score = file_model.predict_proba(features)[0][1]
-    phishing = score > 0.5
-    return jsonify({"score": float(score), "phishing": phishing})
 
 # ==== Serve TFJS Model Files ====
 @app.route("/tfjs/<path:filename>")
