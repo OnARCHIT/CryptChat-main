@@ -5,16 +5,15 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Import your custom components
-import ChatBox from "./ChatBox.jsx";
-import FileInterceptor from ".components/FileInterceptor.jsx";
-import HeadlineTicker from ".components/HeadlineTicker.jsx";
-import LinkInterceptor from ".components/LinkInterceptor.jsx";
-import MediaPanel from ".components/MediaPanel.jsx";
-import NewsFeed from ".components/NewsFeed.jsx";
-import PhishingChallenges from ".components/PhishingChallenges.jsx";
-import PhishingRadar from ".components/PhishingRadar.jsx";
-import ScanPanel from ".components/ScanPanel.jsx";
-
+import ChatBox from "./components/ChatBox.jsx";
+import FileInterceptor from "./components/FileInterceptor.jsx";
+import HeadlineTicker from "./components/HeadlineTicker.jsx";
+import LinkInterceptor from "./components/LinkInterceptor.jsx";
+import MediaPanel from "./components/MediaPanel.jsx";
+import NewsFeed from "./components/NewsFeed.jsx";
+import PhishingChallenges from "./components/PhishingChallenges.jsx";
+import PhishingRadar from "./components/PhishingRadar.jsx";
+import ScanPanel from "./components/ScanPanel.jsx";
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
