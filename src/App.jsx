@@ -1,6 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+// Import your custom components
+import ChatBox from "./ChatBox.jsx";
+import FileInterceptor from ".components/FileInterceptor.jsx";
+import HeadlineTicker from ".components/HeadlineTicker.jsx";
+import LinkInterceptor from ".components/LinkInterceptor.jsx";
+import MediaPanel from ".components/MediaPanel.jsx";
+import NewsFeed from ".components/NewsFeed.jsx";
+import PhishingChallenges from ".components/PhishingChallenges.jsx";
+import PhishingRadar from ".components/PhishingRadar.jsx";
+import ScanPanel from ".components/ScanPanel.jsx";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
   const [url, setUrl] = useState("");
@@ -9,15 +24,32 @@ export default function App() {
   const [imageResult, setImageResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Use Render backend in production
-  const backend =
-    window.location.hostname === "localhost"
-      ? "http://127.0.0.1:5000"
-      : "https://cryptchat2.onrender.com/";
+  const backend = "https://cryptchat2.onrender.com/";
 
-  // ===== URL SCAN =====
+  const scrollRef = useRef(null);
+
+  // ScrollTrigger animation for sections
+  useEffect(() => {
+    const sections = scrollRef.current?.querySelectorAll(".section");
+    if (sections) {
+      sections.forEach((sec) => {
+        gsap.from(sec, {
+          opacity: 0,
+          y: 50,
+          duration: 1,
+          scrollTrigger: {
+            trigger: sec,
+            start: "top 80%",
+            toggleActions: "play none none none",
+          },
+        });
+      });
+    }
+  }, []);
+
+  // ===== URL Scan =====
   const handleUrlScan = async () => {
-    if (!url) return alert("Please enter a URL first!");
+    if (!url) return alert("Please enter a URL!");
     try {
       setLoading(true);
       const res = await axios.post(`${backend}/scan/url`, { url });
@@ -30,9 +62,9 @@ export default function App() {
     }
   };
 
-  // ===== IMAGE SCAN =====
+  // ===== Image Scan =====
   const handleImageScan = async () => {
-    if (!image) return alert("Please select an image first!");
+    if (!image) return alert("Please select an image!");
     try {
       setLoading(true);
       const formData = new FormData();
@@ -50,22 +82,29 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6 space-y-6">
+    <div
+      ref={scrollRef}
+      className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-start p-6 space-y-16"
+    >
       <motion.h1
-        className="text-4xl font-bold text-center mb-8"
-        initial={{ y: -40, opacity: 0 }}
+        className="text-5xl font-bold text-center mt-8"
+        initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        🕵️‍♂️ AI Phishing Detector
+        🕵️‍♂️ CryptChat — AI Phishing Protection
       </motion.h1>
 
-      {/* URL Scanner */}
-      <motion.div
-        className="bg-gray-900 p-6 rounded-2xl shadow-lg w-full max-w-md"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <motion.p
+        className="max-w-3xl text-center text-gray-300"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: { delay: 0.5 } }}
       >
-        <h2 className="text-xl font-semibold mb-3">🔗 URL Scanner</h2>
+        Proactive in-app interception, explainable alerts, and continuous adaptive AI learning — all integrated seamlessly into your daily chat and browser workflow.
+      </motion.p>
+
+      {/* === URL Scanner Section === */}
+      <div className="section bg-gray-900 p-6 rounded-2xl shadow-lg w-full max-w-xl">
+        <h2 className="text-2xl font-semibold mb-3">🔗 URL Scanner</h2>
         <input
           type="text"
           value={url}
@@ -93,15 +132,11 @@ export default function App() {
             (Score: {urlResult.score?.toFixed(3) || "N/A"})
           </p>
         )}
-      </motion.div>
+      </div>
 
-      {/* Image Scanner */}
-      <motion.div
-        className="bg-gray-900 p-6 rounded-2xl shadow-lg w-full max-w-md"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <h2 className="text-xl font-semibold mb-3">🖼️ Image Scanner</h2>
+      {/* === Image Scanner Section === */}
+      <div className="section bg-gray-900 p-6 rounded-2xl shadow-lg w-full max-w-xl">
+        <h2 className="text-2xl font-semibold mb-3">🖼️ Image Scanner</h2>
         <input
           type="file"
           accept="image/*"
@@ -125,10 +160,16 @@ export default function App() {
             >
               {imageResult.phishing ? "Phishing Detected" : "Safe"}
             </span>{" "}
-            (Score: {imageResult.score.toFixed(3)})
+            (Score: {imageResult.score?.toFixed(3) || "N/A"})
           </p>
         )}
-      </motion.div>
-    </div>
-  );
-}
+      </div>
+
+      {/* === Game & Interactive Modules === */}
+      <div className="section w-full max-w-4xl space-y-12">
+        <HeadlineTicker />
+        <MediaPanel />
+        <NewsFeed />
+        <PhishingChallenges />
+        <PhishingRadar />
+        <ScanPanel />
