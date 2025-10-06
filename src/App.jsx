@@ -13,7 +13,7 @@ export default function App() {
   const backend =
     window.location.hostname === "localhost"
       ? "http://127.0.0.1:5000"
-      : "https://cryptchat2.onrender.com";
+      : "https://cryptchat2.onrender.com/";
 
   // ===== URL SCAN =====
   const handleUrlScan = async () => {
