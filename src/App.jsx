@@ -12,7 +12,7 @@ import LinkInterceptor from "./components/LinkInterceptor.jsx";
 import MediaPanel from "./components/MediaPanel.jsx";
 import NewsFeed from "./components/NewsFeed.jsx";
 import PhishingChallenges from "./components/PhishingChallenge.jsx";
-import PhishingRadar from "./components/PhishingRadar.jsx";
+import PhishingRadar from "./components/PhishRadar.jsx";
 import ScanPanel from "./components/ScanPanel.jsx";
 gsap.registerPlugin(ScrollTrigger);
 
