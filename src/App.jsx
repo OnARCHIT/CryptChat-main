@@ -11,10 +11,12 @@ import HeadlineTicker from "./components/HeadlineTicker.jsx";
 import LinkInterceptor from "./components/LinkInterceptor.jsx";
 import MediaPanel from "./components/MediaPanel.jsx";
 import NewsFeed from "./components/NewsFeed.jsx";
-import PhishingChallenges from "./components/PhishingChallenge.jsx";
-import PhishingRadar from "./components/PhishRadar.jsx";
+import PhishingChallenges from "./components/PhishingChallenges.jsx";
+import PhishingRadar from "./components/PhishingRadar.jsx";
 import ScanPanel from "./components/ScanPanel.jsx";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 
+// Helper / Extension Integration
 import { startClipboardMonitor } from "./utils/clipboardMonitor.js";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -28,12 +30,12 @@ export default function App() {
   const [theme, setTheme] = useState("dark");
 
   const scrollRef = useRef(null);
-  const backend = "https://cryptchat2.onrender.com";
+  const backend = "https://cryptchat2.onrender.com/";
 
-  // === Theme Toggle ===
+  // Theme toggle
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
-  // === Scroll animations ===
+  // GSAP scroll animations
   useEffect(() => {
     const sections = scrollRef.current?.querySelectorAll(".section");
     sections?.forEach((sec) => {
@@ -50,20 +52,22 @@ export default function App() {
     });
   }, []);
 
-  // === Clipboard Monitoring ===
+  // Clipboard monitoring
   useEffect(() => {
     startClipboardMonitor((text) => {
       console.log("Clipboard content detected:", text);
+      if (window.helperAPI) window.helperAPI.sendClipboardData(text);
     });
   }, []);
 
-  // === URL Scan ===
+  // URL Scan
   const handleUrlScan = async () => {
     if (!url) return alert("Please enter a URL!");
     try {
       setLoading(true);
       const res = await axios.post(`${backend}/scan/url`, { url });
       setUrlResult(res.data);
+      if (window.helperAPI) window.helperAPI.notify("URL scan complete!");
     } catch {
       alert("Error scanning URL!");
     } finally {
@@ -71,7 +75,7 @@ export default function App() {
     }
   };
 
-  // === Image Scan ===
+  // Image Scan
   const handleImageScan = async () => {
     if (!image) return alert("Please select an image!");
     try {
@@ -82,6 +86,7 @@ export default function App() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setImageResult(res.data);
+      if (window.helperAPI) window.helperAPI.notify("Image scan complete!");
     } catch {
       alert("Error scanning image!");
     } finally {
@@ -89,7 +94,6 @@ export default function App() {
     }
   };
 
-  // === THEME COLORS ===
   const isDark = theme === "dark";
   const bgGradient = isDark
     ? "from-gray-950 via-gray-900 to-black"
@@ -101,26 +105,12 @@ export default function App() {
       ref={scrollRef}
       className={`relative min-h-screen w-full overflow-x-hidden transition-colors duration-500 bg-gradient-to-b ${bgGradient} ${textColor}`}
     >
-      {/* Background Glow */}
-      {isDark && (
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(56,189,248,0.15),transparent_60%)] pointer-events-none" />
-      )}
-
       {/* Header */}
       <header className="flex justify-between items-center p-6 sticky top-0 z-50 backdrop-blur-xl bg-black/30 border-b border-gray-800">
         <h1 className="text-2xl font-extrabold tracking-tight">
           🔐 CryptChat
         </h1>
-        <button
-          onClick={toggleTheme}
-          className={`px-4 py-2 rounded-full font-semibold transition-all ${
-            isDark
-              ? "bg-blue-600 hover:bg-blue-700 text-white"
-              : "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-          }`}
-        >
-          {isDark ? "☀️ Daylight Mode" : "🌙 Night Mode"}
-        </button>
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
       </header>
 
       {/* Hero */}
@@ -139,8 +129,7 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, transition: { delay: 0.5 } }}
         >
-          Real-time interception, adaptive threat learning, and explainable AI —
-          integrated into your daily communication.
+          Real-time interception, adaptive threat learning, and explainable AI — integrated into your daily communication.
         </motion.p>
       </section>
 
@@ -176,7 +165,6 @@ export default function App() {
           >
             {loading ? "Scanning..." : "Scan URL"}
           </button>
-
           {urlResult && (
             <p className="mt-3 text-center text-lg">
               Result:{" "}
@@ -220,7 +208,6 @@ export default function App() {
           >
             {loading ? "Scanning..." : "Scan Image"}
           </button>
-
           {imageResult && (
             <p className="mt-3 text-center text-lg">
               Result:{" "}
@@ -237,7 +224,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* AI Modules */}
+      {/* Interactive AI Modules */}
       <section className="section w-full max-w-6xl mx-auto space-y-16 py-20 px-6">
         <HeadlineTicker />
         <MediaPanel />
