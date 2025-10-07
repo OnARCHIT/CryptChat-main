@@ -1,0 +1,4 @@
+body { font-family: Arial, sans-serif; background: #001217; color: #14F195; padding: 12px; }
+h2 { margin-top: 0; }
+button { padding: 8px 12px; background: #14F195; color: #001217; border: none; border-radius: 4px; cursor: pointer; }
+button:hover { background: #10c582; }
