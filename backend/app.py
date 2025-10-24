@@ -1,17 +1,15 @@
-# app.py
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import Dict
+import os
 import uvicorn
 
 # ------------------- FastAPI App -------------------
 app = FastAPI(title="CryptChat Security API")
 
 # ------------------- CORS Setup -------------------
-origins = [
-    "*",  # Replace "*" with your frontend domain if needed
-]
+origins = ["*"]  # You can restrict to your frontend domain if needed
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,35 +43,30 @@ def dummy_scan_result() -> Dict:
 # ------------------- URL Scan -------------------
 @app.post("/scan/url")
 async def scan_url(request: URLScanRequest):
-    url = request.url
-    # Here you can add real URL scanning logic
     result = dummy_scan_result()
     return result
 
 # ------------------- Email Scan -------------------
 @app.post("/scan/email")
 async def scan_email(request: EmailScanRequest):
-    email_content = request.data
-    # Here you can add real email scanning logic
     result = dummy_scan_result()
     return result
 
 # ------------------- Image Scan -------------------
 @app.post("/scan/image")
 async def scan_image(file: UploadFile = File(...)):
-    # You can process the uploaded file here
-    contents = await file.read()  # Do something with image
+    contents = await file.read()  # You can process the uploaded image
     result = dummy_scan_result()
     return result
 
-# ------------------- Voice Scan (Optional) -------------------
+# ------------------- Voice Scan -------------------
 @app.post("/scan/voice")
 async def scan_voice(file: UploadFile = File(...)):
-    # You can process the uploaded audio here
-    contents = await file.read()
+    contents = await file.read()  # You can process the uploaded audio
     result = dummy_scan_result()
     return result
 
-# ------------------- Run Server (Local Test) -------------------
+# ------------------- Run Server (Render / Local) -------------------
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
