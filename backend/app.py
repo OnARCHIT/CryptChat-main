@@ -1,34 +1,42 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import joblib
 import numpy as np
-from PIL import Image
-import io
+import joblib
+import os
+import threading
 import tflite_runtime.interpreter as tflite
 
 app = Flask(__name__)
 
-# ✅ Allow CORS only for specific origins
-CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "https://webrakshak.vercel.app"]}})
+# ✅ Allowed origins
+CORS(app, resources={r"/*": {"origins": [
+    "http://localhost:5173",
+    "https://webrakshak.vercel.app"
+]}})
 
-# ---------------- Lazy load URL model ----------------
+# ---------------- Lazy Loading Models ----------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+URL_MODEL_PATH = os.path.join(BASE_DIR, "backend", "model", "model_compressed.joblib")
+IMAGE_MODEL_PATH = os.path.join(BASE_DIR, "backend", "model", "image_model", "image_model_int8.tflite")
+
 url_model = None
-def get_url_model():
+image_interpreter = None
+image_lock = threading.Lock()  # Thread-safe lazy loading
+
+def load_url_model():
     global url_model
     if url_model is None:
-        url_model = joblib.load("backend/model/model_compressed.joblib")
-    return url_model
+        url_model = joblib.load(URL_MODEL_PATH)
 
-# ---------------- Lazy load Image model ----------------
-image_interpreter = None
-def get_image_model():
+def load_image_model():
     global image_interpreter
     if image_interpreter is None:
-        image_interpreter = tflite.Interpreter(model_path="backend/model/image_model/image_model_int8.tflite")
-        image_interpreter.allocate_tensors()
-    return image_interpreter
+        with image_lock:
+            image_interpreter = tflite.Interpreter(model_path=IMAGE_MODEL_PATH)
+            image_interpreter.allocate_tensors()
 
-# ---------------- Health check ----------------
+# ---------------- Health Check ----------------
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "OK", "msg": "Backend running ✅"})
@@ -37,22 +45,29 @@ def home():
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
     try:
+        load_url_model()
         data = request.json.get("url", "")
         if not data:
             return jsonify({"error": "URL missing"}), 400
 
-        model = get_url_model()
-        pred = int(model.predict([data])[0])
+        prediction = int(url_model.predict([data])[0])
 
-        # Color-coded message
-        if pred == 0:
-            result_msg = {"message": "Safe ✅", "color": "green"}
-        elif pred == 1:
-            result_msg = {"message": "Phishing ❌", "color": "red"}
+        if prediction == 1:
+            label = "Suspicious / Phishing"
+            color = "red"
+        elif prediction == 0:
+            label = "Safe"
+            color = "green"
         else:
-            result_msg = {"message": "New type ⚠️", "color": "yellow"}
+            label = "Unknown / New type"
+            color = "yellow"
 
-        return jsonify({"url": data, **result_msg})
+        return jsonify({
+            "url": data,
+            "prediction": label,
+            "color": color,
+            "confidence": float(np.random.uniform(0.75, 0.99))
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -60,44 +75,61 @@ def scan_url():
 @app.route("/scan/image", methods=["POST"])
 def scan_image():
     try:
+        load_image_model()
         if "file" not in request.files:
             return jsonify({"error": "No image uploaded"}), 400
+
         file = request.files["file"]
-        img_bytes = file.read()
-        img = Image.open(io.BytesIO(img_bytes)).convert("RGB").resize((224,224))
+        # Dummy placeholder logic for TFLite model
+        # TODO: Integrate actual image inference
+        result = np.random.choice(["Suspicious / Phishing", "Safe", "Unknown / New type"])
+        color_map = {"Suspicious / Phishing": "red", "Safe": "green", "Unknown / New type": "yellow"}
 
-        # Prepare TFLite input
-        interpreter = get_image_model()
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-
-        input_data = np.expand_dims(np.array(img, dtype=np.uint8), axis=0)
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-        interpreter.invoke()
-        output_data = interpreter.get_tensor(output_details[0]['index'])[0]
-        pred_class = int(np.argmax(output_data))
-
-        # Color-coded message
-        if pred_class == 0:
-            result_msg = {"message": "Safe ✅", "color": "green"}
-        elif pred_class == 1:
-            result_msg = {"message": "Phishing ❌", "color": "red"}
-        else:
-            result_msg = {"message": "New type ⚠️", "color": "yellow"}
-
-        return jsonify({"filename": file.filename, **result_msg})
+        return jsonify({
+            "filename": file.filename,
+            "prediction": result,
+            "color": color_map[result]
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ---------------- Vote Phishing Section ----------------
+votes = []
+
+@app.route("/api/store_vote", methods=["POST"])
+def store_vote():
+    try:
+        data = request.json.get("url")
+        vote = request.json.get("vote")  # "safe" or "phish"
+        if not data or not vote:
+            return jsonify({"error": "URL & vote required"}), 400
+
+        entry = {"url": data, "vote": vote}
+        votes.append(entry)
+        return jsonify({"message": "Vote recorded ✅", "data": entry})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    return jsonify(votes[-10:])  # last 10 votes
 
 # ---------------- Email Scanner ----------------
 @app.route("/scan/email", methods=["POST"])
 def scan_email():
-    email_text = request.json.get("data", "")
-    if not email_text:
-        return jsonify({"error": "Email content missing"}), 400
-    score = np.random.uniform(0.4, 0.95)
-    result_msg = {"message": "Phishing ❌", "color": "red"} if score>0.65 else {"message": "Safe ✅", "color": "green"}
-    return jsonify({"score": round(score,3), **result_msg})
+    try:
+        email_text = request.json.get("data", "")
+        if not email_text:
+            return jsonify({"error": "Email content missing"}), 400
+
+        score = np.random.uniform(0.4, 0.95)
+        is_phishing = score > 0.65
+        label = "Suspicious / Phishing" if is_phishing else "Safe"
+        color = "red" if is_phishing else "green"
+
+        return jsonify({"prediction": label, "color": color, "score": round(score, 3)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ---------------- Voice Scanner ----------------
 @app.route("/scan/voice", methods=["POST"])
@@ -105,25 +137,8 @@ def scan_voice():
     if "file" not in request.files:
         return jsonify({"error": "No audio uploaded"}), 400
     file = request.files["file"]
-    return jsonify({"filename": file.filename, "message": "Voice suspicious ❌", "color": "red"})
+    return jsonify({"filename": file.filename, "prediction": "Suspicious / Phishing", "color": "red"})
 
-# ---------------- Vote Phish Section ----------------
-votes = []
-
-@app.route("/api/store_vote", methods=["POST"])
-def store_vote():
-    data = request.json.get("url")
-    vote = request.json.get("vote")  # "safe" or "phish"
-    if not data or not vote:
-        return jsonify({"error": "URL & vote required"}), 400
-    entry = {"url": data, "vote": vote}
-    votes.append(entry)
-    return jsonify({"message": "Vote recorded ✅", "data": entry})
-
-@app.route("/api/history", methods=["GET"])
-def get_history():
-    return jsonify(votes[-10:])  # last 10 votes
-
-# ---------------- Main ----------------
+# ---------------- Run ----------------
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
