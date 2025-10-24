@@ -71,7 +71,7 @@ def predict_image(img_file):
 # ==== API Endpoints ====
 @app.route("/")
 def home():
-    return "✅ CryptChat Backend is Running! API endpoints: /scan_url, /scan_image, /scan_email"
+    return "✅ PhisingSheild Backend is Running! API endpoints: /scan_url, /scan_image, /scan_email"
 
 @app.route("/scan_url", methods=["POST"])
 def scan_url():
