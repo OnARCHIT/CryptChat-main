@@ -1,6 +1,6 @@
 Flask==3.0.3
 Flask-Cors==4.0.1
-gunicorn==21.2.0        # production server
+gunicorn==21.2.0
 joblib==1.4.2
 numpy==1.26.4
 pandas==2.2.2
@@ -11,4 +11,3 @@ tldextract==5.1.2
 python-whois==0.9.3
 Pillow==10.4.0
 email-validator==2.1.1
-tflite-runtime==2.13.0   # only if you use your image model
