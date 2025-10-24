@@ -4,15 +4,18 @@ import keras
 import numpy as np
 from tensorflow.keras.preprocessing import image
 import os
+from flask_cors import CORS  # <--- Enable CORS
 
 # ==== Enable unsafe deserialization for Lambda layers ====
 keras.config.enable_unsafe_deserialization()
 
 app = Flask(__name__)
+CORS(app)  # <--- Allow frontend to access backend
 
 # ==== Paths ====
 URL_MODEL_PATH = "model/url_model.keras"
 IMAGE_MODEL_PATH = "model/image_model/image_model_int8.tflite"
+EMAIL_MODEL_PATH = "model/email_model.keras"  # optional email model if exists
 
 # ==== Load Models ====
 url_model = tf.keras.models.load_model(URL_MODEL_PATH, compile=False)
@@ -26,11 +29,27 @@ output_index = image_output["index"]
 input_scale, input_zero_point = image_input["quantization"]
 output_scale, output_zero_point = image_output["quantization"]
 
+# Optional: Email model
+try:
+    email_model = tf.keras.models.load_model(EMAIL_MODEL_PATH, compile=False)
+except:
+    email_model = None
+
 # ==== Helper Functions ====
 def preprocess_url(url):
     url = url.lower()
     max_len = 200
     x = [ord(c) for c in url[:max_len]]
+    if len(x) < max_len:
+        x += [0] * (max_len - len(x))
+    return np.array([x])
+
+def preprocess_email(email):
+    if email_model is None:
+        return None
+    email = email.lower()
+    max_len = 200
+    x = [ord(c) for c in email[:max_len]]
     if len(x) < max_len:
         x += [0] * (max_len - len(x))
     return np.array([x])
@@ -52,9 +71,9 @@ def predict_image(img_file):
 # ==== API Endpoints ====
 @app.route("/")
 def home():
-    return "✅ CryptChat Backend is Running! API endpoints: /scan/url, /scan/image"
+    return "✅ CryptChat Backend is Running! API endpoints: /scan_url, /scan_image, /scan_email"
 
-@app.route("/scan/url", methods=["POST"])
+@app.route("/scan_url", methods=["POST"])
 def scan_url():
     data = request.get_json()
     if not data or "url" not in data:
@@ -62,15 +81,39 @@ def scan_url():
     x = preprocess_url(data["url"])
     score = float(url_model.predict(x)[0][0])
     phishing = score > 0.5
-    return jsonify({"score": score, "phishing": phishing})
+    return jsonify({
+        "score": score,
+        "phishing": phishing,
+        "details":[{"reason":"URL check","confidence":score}]
+    })
 
-@app.route("/scan/image", methods=["POST"])
+@app.route("/scan_image", methods=["POST"])
 def scan_image():
-    if "image" not in request.files:
+    if "file" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
-    score = predict_image(request.files["image"])
+    score = predict_image(request.files["file"])
     phishing = score > 0.5
-    return jsonify({"score": score, "phishing": phishing})
+    return jsonify({
+        "score": score,
+        "phishing": phishing,
+        "details":[{"reason":"Image check","confidence":score}]
+    })
+
+@app.route("/scan_email", methods=["POST"])
+def scan_email():
+    if email_model is None:
+        return jsonify({"error": "Email model not available"}), 501
+    data = request.get_json()
+    if not data or "email" not in data:
+        return jsonify({"error": "Missing email"}), 400
+    x = preprocess_email(data["email"])
+    score = float(email_model.predict(x)[0][0])
+    phishing = score > 0.5
+    return jsonify({
+        "score": score,
+        "phishing": phishing,
+        "details":[{"reason":"Email check","confidence":score}]
+    })
 
 # ==== Serve TFJS Model Files ====
 @app.route("/tfjs/<path:filename>")
