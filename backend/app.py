@@ -12,24 +12,28 @@ CORS(app, resources={r"/*": {"origins": [
     "https://webrakshak.vercel.app"
 ]}})
 
-# Load phishing detection model
+# ✅ Load phishing detection model
 try:
     model = joblib.load("url_model/url_scan.joblib")
 except:
     model = None
 
+# ✅ Health check
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "OK", "msg": "Backend running ✅"})
 
-# URL Scanner
+# ---------------- URL Scanner ----------------
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
     try:
         data = request.json.get("url", "")
         if not data:
             return jsonify({"error": "URL missing"}), 400
+
+        # ML Model prediction (dummy fallback if model not loaded)
         prediction = int(model.predict([data])[0]) if model else 0
+
         return jsonify({
             "url": data,
             "is_phishing": bool(prediction),
@@ -38,49 +42,54 @@ def scan_url():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Email Scanner
+# ---------------- Email Scanner ----------------
 @app.route("/scan/email", methods=["POST"])
 def scan_email():
     email_text = request.json.get("data", "")
     if not email_text:
         return jsonify({"error": "Email content missing"}), 400
+
     score = np.random.uniform(0.4, 0.95)
     return jsonify({"is_phishing": score > 0.65, "score": round(score, 3)})
 
-# Image Scanner
+# ---------------- Image Scanner ----------------
 @app.route("/scan/image", methods=["POST"])
 def scan_image():
-    if "file" not in request.files:
+    if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
-    file = request.files["file"]
+
+    file = request.files["image"]
     return jsonify({"filename": file.filename, "result": "No phishing element detected ✅"})
 
-# Voice Scanner
+# ---------------- Voice Scanner ----------------
 @app.route("/scan/voice", methods=["POST"])
 def scan_voice():
-    if "file" not in request.files:
+    if "audio" not in request.files:
         return jsonify({"error": "No audio uploaded"}), 400
-    file = request.files["file"]
+
+    file = request.files["audio"]
     return jsonify({"filename": file.filename, "risk": "Voice suspicious ❌"})
 
-# Vote Phish Section
+# ---------------- Vote Phishing Section ----------------
 votes = []
 
 @app.route("/api/vote-phish", methods=["POST"])
 def vote_phish():
     data = request.json.get("url")
-    vote = request.json.get("vote")
+    vote = request.json.get("vote")  # "safe" or "phish"
+
     if not data or not vote:
         return jsonify({"error": "URL & vote required"}), 400
+
     entry = {"url": data, "vote": vote}
     votes.append(entry)
     return jsonify({"message": "Vote recorded ✅", "data": entry})
 
+# ---------------- History Logs ----------------
 @app.route("/api/history", methods=["GET"])
 def get_history():
-    return jsonify(votes[-10:])
+    return jsonify(votes[-10:])  # return last 10 votes
 
+# ---------------- Main ----------------
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, host="0.0.0.0", port=port)
+    app.run(debug=False, host="0.0.0.0", port=5000)
