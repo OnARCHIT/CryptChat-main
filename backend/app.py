@@ -1,36 +1,15 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Dict
-import os
-import uvicorn
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-# ------------------- FastAPI App -------------------
-app = FastAPI(title="CryptChat Security API")
-
-# ------------------- CORS Setup -------------------
-origins = ["*"]  # You can restrict to your frontend domain if needed
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ------------------- Request Models -------------------
-class URLScanRequest(BaseModel):
-    url: str
-
-class EmailScanRequest(BaseModel):
-    data: str  # email content
+# ------------------- Flask App -------------------
+app = Flask(__name__)
+CORS(app)  # Allow all origins, you can restrict to your frontend domain
 
 # ------------------- Helper Function (Dummy) -------------------
-def dummy_scan_result() -> Dict:
+def dummy_scan_result():
     """
     Returns a dummy scan result.
-    Replace this logic with real ML or rule-based scanning.
+    Replace this with real ML or rule-based scanning logic.
     """
     return {
         "score": 85,
@@ -40,33 +19,39 @@ def dummy_scan_result() -> Dict:
         ],
     }
 
-# ------------------- URL Scan -------------------
-@app.post("/scan/url")
-async def scan_url(request: URLScanRequest):
-    result = dummy_scan_result()
-    return result
+# ------------------- Routes -------------------
+@app.route("/scan/url", methods=["POST"])
+def scan_url():
+    data = request.get_json()
+    url = data.get("url", "")
+    # Add real URL scanning logic here
+    return jsonify(dummy_scan_result())
 
-# ------------------- Email Scan -------------------
-@app.post("/scan/email")
-async def scan_email(request: EmailScanRequest):
-    result = dummy_scan_result()
-    return result
+@app.route("/scan/email", methods=["POST"])
+def scan_email():
+    data = request.get_json()
+    email_content = data.get("data", "")
+    # Add real email scanning logic here
+    return jsonify(dummy_scan_result())
 
-# ------------------- Image Scan -------------------
-@app.post("/scan/image")
-async def scan_image(file: UploadFile = File(...)):
-    contents = await file.read()  # You can process the uploaded image
-    result = dummy_scan_result()
-    return result
+@app.route("/scan/image", methods=["POST"])
+def scan_image():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files["file"]
+    # Add real image scanning logic here
+    return jsonify(dummy_scan_result())
 
-# ------------------- Voice Scan -------------------
-@app.post("/scan/voice")
-async def scan_voice(file: UploadFile = File(...)):
-    contents = await file.read()  # You can process the uploaded audio
-    result = dummy_scan_result()
-    return result
+@app.route("/scan/voice", methods=["POST"])
+def scan_voice():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files["file"]
+    # Add real voice scanning logic here
+    return jsonify(dummy_scan_result())
 
-# ------------------- Run Server (Render / Local) -------------------
+# ------------------- Main -------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("app:app", host="0.0.0.0", port=port)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
