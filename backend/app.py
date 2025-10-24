@@ -5,9 +5,10 @@ import joblib
 
 app = Flask(__name__)
 
-# ✅ Allow CORS only for specific origins
+# Allow only your frontend origins
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://webrakshak.vercel.app"
 ]}})
 
