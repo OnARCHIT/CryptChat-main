@@ -2,16 +2,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 import joblib
+import os
 
 app = Flask(__name__)
 
-# ✅ Allow CORS for all domains
-CORS(app, resources={r"/*": {"origins": "*"}})
+# ✅ Allow CORS for local dev and deployed frontend
+CORS(app, origins=["http://localhost:5173", "https://yourfrontenddomain.com", "*"])
 
 # ✅ Load phishing detection model
-try:
-    model = joblib.load("url_model/url_scan.joblib")
-except:
+MODEL_PATH = "url_model/url_scan.joblib"
+if os.path.exists(MODEL_PATH):
+    model = joblib.load(MODEL_PATH)
+else:
     model = None
 
 # ✅ Health check
@@ -19,8 +21,7 @@ except:
 def home():
     return jsonify({"status": "OK", "msg": "Backend running ✅"})
 
-
-# ✅ URL Scanner
+# ---------------- URL Scanner ----------------
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
     try:
@@ -28,7 +29,7 @@ def scan_url():
         if not data:
             return jsonify({"error": "URL missing"}), 400
 
-        # Dummy check / ML Model
+        # ML Model prediction if available, else dummy 0
         prediction = int(model.predict([data])[0]) if model else 0
 
         return jsonify({
@@ -39,8 +40,7 @@ def scan_url():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# ✅ Email Scanner
+# ---------------- Email Scanner ----------------
 @app.route("/scan/email", methods=["POST"])
 def scan_email():
     email_text = request.json.get("data", "")
@@ -50,8 +50,7 @@ def scan_email():
     score = np.random.uniform(0.4, 0.95)
     return jsonify({"is_phishing": score > 0.65, "score": round(score, 3)})
 
-
-# ✅ Image Scanner
+# ---------------- Image Scanner ----------------
 @app.route("/scan/image", methods=["POST"])
 def scan_image():
     if "file" not in request.files:
@@ -60,8 +59,7 @@ def scan_image():
     file = request.files["file"]
     return jsonify({"filename": file.filename, "result": "No phishing element detected ✅"})
 
-
-# ✅ Voice Scanner
+# ---------------- Voice Scanner ----------------
 @app.route("/scan/voice", methods=["POST"])
 def scan_voice():
     if "file" not in request.files:
@@ -70,8 +68,7 @@ def scan_voice():
     file = request.files["file"]
     return jsonify({"filename": file.filename, "risk": "Voice suspicious ❌"})
 
-
-# ✅ Vote Phishing Section
+# ---------------- Vote Phish ----------------
 votes = []
 
 @app.route("/api/vote-phish", methods=["POST"])
@@ -86,12 +83,11 @@ def vote_phish():
     votes.append(entry)
     return jsonify({"message": "Vote recorded ✅", "data": entry})
 
-
-# ✅ History Logs for voting UI
 @app.route("/api/history", methods=["GET"])
 def get_history():
-    return jsonify(votes[-10:])  # return only last 10 for performance
+    return jsonify(votes[-10:])  # last 10 votes
 
-
+# ---------------- Main ----------------
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
