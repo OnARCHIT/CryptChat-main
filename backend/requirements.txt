@@ -5,9 +5,5 @@ joblib==1.4.2
 numpy==1.26.4
 pandas==2.2.2
 scikit-learn==1.5.1
-requests==2.32.3
-beautifulsoup4==4.12.3
-tldextract==5.1.2
-python-whois==0.9.3
 Pillow==10.4.0
-email-validator==2.1.1
+tflite-runtime==2.12.0
