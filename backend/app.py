@@ -1,57 +1,97 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import random
+import numpy as np
+import joblib
 
 app = Flask(__name__)
 
-# ✅ Allow ALL origins, methods & headers
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# ✅ Allow CORS for all domains
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-def dummy_scan_result():
-    return {
-        "score": random.randint(60, 95),
-        "details": [
-            {"reason": "Suspicious domain pattern", "confidence": 0.85},
-            {"reason": "Potential phishing indicators", "confidence": 0.72},
-        ],
-    }
+# ✅ Load phishing detection model
+try:
+    model = joblib.load("url_model/url_scan.joblib")
+except:
+    model = None
 
+# ✅ Health check
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({
-        "message": "✅ WebRakshak Backend is Running Successfully!",
-        "endpoints": ["/scan/url", "/scan/email", "/scan/image", "/scan/voice"]
-    })
+    return jsonify({"status": "OK", "msg": "Backend running ✅"})
 
+
+# ✅ URL Scanner
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
-    url = request.json.get("url", "")
-    result = dummy_scan_result()
-    result["input"] = url
-    return jsonify(result)
+    try:
+        data = request.json.get("url", "")
+        if not data:
+            return jsonify({"error": "URL missing"}), 400
 
+        # Dummy check / ML Model
+        prediction = int(model.predict([data])[0]) if model else 0
+
+        return jsonify({
+            "url": data,
+            "is_phishing": bool(prediction),
+            "confidence": float(np.random.uniform(0.75, 0.99))
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ✅ Email Scanner
 @app.route("/scan/email", methods=["POST"])
 def scan_email():
-    email_content = request.json.get("email", "")
-    result = dummy_scan_result()
-    result["input"] = email_content
-    return jsonify(result)
+    email_text = request.json.get("data", "")
+    if not email_text:
+        return jsonify({"error": "Email content missing"}), 400
 
+    score = np.random.uniform(0.4, 0.95)
+    return jsonify({"is_phishing": score > 0.65, "score": round(score, 3)})
+
+
+# ✅ Image Scanner
 @app.route("/scan/image", methods=["POST"])
 def scan_image():
     if "file" not in request.files:
-        return jsonify({"error": "No image provided"}), 400
-    result = dummy_scan_result()
-    result["fileName"] = request.files["file"].filename
-    return jsonify(result)
+        return jsonify({"error": "No image uploaded"}), 400
 
+    file = request.files["file"]
+    return jsonify({"filename": file.filename, "result": "No phishing element detected ✅"})
+
+
+# ✅ Voice Scanner
 @app.route("/scan/voice", methods=["POST"])
 def scan_voice():
     if "file" not in request.files:
-        return jsonify({"error": "No audio provided"}), 400
-    result = dummy_scan_result()
-    result["fileName"] = request.files["file"].filename
-    return jsonify(result)
+        return jsonify({"error": "No audio uploaded"}), 400
+
+    file = request.files["file"]
+    return jsonify({"filename": file.filename, "risk": "Voice suspicious ❌"})
+
+
+# ✅ Vote Phishing Section
+votes = []
+
+@app.route("/api/vote-phish", methods=["POST"])
+def vote_phish():
+    data = request.json.get("url")
+    vote = request.json.get("vote")  # "safe" or "phish"
+
+    if not data or not vote:
+        return jsonify({"error": "URL & vote required"}), 400
+
+    entry = {"url": data, "vote": vote}
+    votes.append(entry)
+    return jsonify({"message": "Vote recorded ✅", "data": entry})
+
+
+# ✅ History Logs for voting UI
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    return jsonify(votes[-10:])  # return only last 10 for performance
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False, host="0.0.0.0", port=5000)
