@@ -3,8 +3,6 @@ Flask-Cors==4.0.1
 gunicorn==21.2.0
 joblib==1.4.2
 numpy==1.26.4
-pandas==2.2.2
-scikit-learn==1.5.1
-Pillow==10.4.0
-tflite-runtime==2.14.0
+tensorflow-cpu==2.12.0
 requests==2.32.3
+Pillow==10.4.0
