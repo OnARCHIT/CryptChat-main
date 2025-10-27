@@ -4,42 +4,73 @@ import numpy as np
 import joblib
 import os
 import threading
+import requests
 import tflite_runtime.interpreter as tflite
 
 app = Flask(__name__)
 
-# ✅ Allowed origins
+# ✅ CORS settings
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:5173",
     "https://webrakshak.vercel.app"
 ]}})
 
-# ---------------- Lazy Loading Models ----------------
+# ---------------- Paths & Config ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-URL_MODEL_PATH = os.path.join(BASE_DIR, "backend", "model", "model_compressed.joblib")
-IMAGE_MODEL_PATH = os.path.join(BASE_DIR, "backend", "model", "image_model", "image_model_int8.tflite")
+URL_MODEL_PATH = os.path.join(MODEL_DIR, "model_compressed.joblib")
+IMAGE_MODEL_PATH = os.path.join(MODEL_DIR, "image_model_int8.tflite")
+
+# 🔗 REPLACE with your actual Google Drive *file* links (not folder links)
+# Get file link → replace /file/d/FILE_ID/view → with → uc?export=download&id=FILE_ID
+URL_MODEL_LINK = "https://drive.google.com/file/d/1SQ9edzHisBtS7KutvRI-14o4vxI3Ref3/view?usp=drive_link"
+IMAGE_MODEL_LINK = "https://drive.google.com/file/d/1kuQVSpu_Hx853SHhL4cMtw28gC83-nYl/view?usp=drive_link"
 
 url_model = None
 image_interpreter = None
-image_lock = threading.Lock()  # Thread-safe lazy loading
+image_lock = threading.Lock()
+
+
+# ---------------- Helpers ----------------
+def download_if_missing(link, dest):
+    """Downloads a model from Google Drive if not already present."""
+    if not os.path.exists(dest):
+        print(f"📥 Downloading model from {link} ...")
+        r = requests.get(link, stream=True)
+        r.raise_for_status()
+        with open(dest, "wb") as f:
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+        print(f"✅ Saved to {dest}")
+    else:
+        print(f"✅ {os.path.basename(dest)} already exists")
+
 
 def load_url_model():
     global url_model
     if url_model is None:
+        download_if_missing(URL_MODEL_LINK, URL_MODEL_PATH)
         url_model = joblib.load(URL_MODEL_PATH)
+        print("✅ URL model loaded")
+
 
 def load_image_model():
     global image_interpreter
     if image_interpreter is None:
         with image_lock:
+            download_if_missing(IMAGE_MODEL_LINK, IMAGE_MODEL_PATH)
             image_interpreter = tflite.Interpreter(model_path=IMAGE_MODEL_PATH)
             image_interpreter.allocate_tensors()
+            print("✅ Image model loaded")
+
 
 # ---------------- Health Check ----------------
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "OK", "msg": "Backend running ✅"})
+
 
 # ---------------- URL Scanner ----------------
 @app.route("/scan/url", methods=["POST"])
@@ -50,17 +81,15 @@ def scan_url():
         if not data:
             return jsonify({"error": "URL missing"}), 400
 
+        # Predict
         prediction = int(url_model.predict([data])[0])
 
         if prediction == 1:
-            label = "Suspicious / Phishing"
-            color = "red"
+            label, color = "Suspicious / Phishing", "red"
         elif prediction == 0:
-            label = "Safe"
-            color = "green"
+            label, color = "Safe", "green"
         else:
-            label = "Unknown / New type"
-            color = "yellow"
+            label, color = "Unknown / New type", "yellow"
 
         return jsonify({
             "url": data,
@@ -71,6 +100,7 @@ def scan_url():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ---------------- Image Scanner ----------------
 @app.route("/scan/image", methods=["POST"])
 def scan_image():
@@ -80,8 +110,8 @@ def scan_image():
             return jsonify({"error": "No image uploaded"}), 400
 
         file = request.files["file"]
-        # Dummy placeholder logic for TFLite model
-        # TODO: Integrate actual image inference
+
+        # Placeholder (actual image preprocessing can be added)
         result = np.random.choice(["Suspicious / Phishing", "Safe", "Unknown / New type"])
         color_map = {"Suspicious / Phishing": "red", "Safe": "green", "Unknown / New type": "yellow"}
 
@@ -93,14 +123,15 @@ def scan_image():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ---------------- Vote Phishing Section ----------------
+
+# ---------------- Vote Storage ----------------
 votes = []
 
 @app.route("/api/store_vote", methods=["POST"])
 def store_vote():
     try:
         data = request.json.get("url")
-        vote = request.json.get("vote")  # "safe" or "phish"
+        vote = request.json.get("vote")
         if not data or not vote:
             return jsonify({"error": "URL & vote required"}), 400
 
@@ -110,9 +141,11 @@ def store_vote():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/history", methods=["GET"])
 def get_history():
-    return jsonify(votes[-10:])  # last 10 votes
+    return jsonify(votes[-10:])
+
 
 # ---------------- Email Scanner ----------------
 @app.route("/scan/email", methods=["POST"])
@@ -131,6 +164,7 @@ def scan_email():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ---------------- Voice Scanner ----------------
 @app.route("/scan/voice", methods=["POST"])
 def scan_voice():
@@ -138,6 +172,7 @@ def scan_voice():
         return jsonify({"error": "No audio uploaded"}), 400
     file = request.files["file"]
     return jsonify({"filename": file.filename, "prediction": "Suspicious / Phishing", "color": "red"})
+
 
 # ---------------- Run ----------------
 if __name__ == "__main__":
