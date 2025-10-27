@@ -23,8 +23,8 @@ def add_cors_headers(response):
 
 
 # === GOOGLE DRIVE MODEL LINKS (Direct downloadable) ===
-URL_MODEL_ID = "1oHMxKQF8XiZaxfWxL4Gy0i_OPZtXnZV7"
-IMAGE_MODEL_ID = "1ZCJR_w4OGx-g2z7j-J6lC2nOmoGtmqJO"
+URL_MODEL_ID = "1SQ9edzHisBtS7KutvRI-14o4vxI3Ref3"
+IMAGE_MODEL_ID = "1kuQVSpu_Hx853SHhL4cMtw28gC83-nYl"
 
 MODEL_DIR = "models"
 os.makedirs(MODEL_DIR, exist_ok=True)
