@@ -7,6 +7,7 @@ import requests
 import zipfile
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
+import json
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "https://webrakshak.vercel.app"}})
@@ -18,17 +19,18 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
     return response
 
-
 # === Google Drive zip file IDs (replace with your actual zip IDs) ===
-URL_MODEL_ID = "1SQ9edzHisBtS7KutvRI-14o4vxI3Ref3"     # zipped URL model
-IMAGE_MODEL_ID = "1kuQVSpu_Hx853SHhL4cMtw28gC83-nYl"    # zipped image model
+URL_MODEL_ID = "1SQ9edzHisBtS7KutvRI-14o4vxI3Ref3"
+IMAGE_MODEL_ID = "1kuQVSpu_Hx853SHhL4cMtw28gC83-nYl"
 
 MODEL_DIR = "models"
 os.makedirs(MODEL_DIR, exist_ok=True)
+REWARD_FILE = os.path.join(MODEL_DIR, "reward_memory.json")
 
-
+# ============================================================
+# Helper: download + unzip Google Drive files
+# ============================================================
 def download_and_unzip(file_id, zip_path, extract_dir):
-    """Downloads and unzips model from Google Drive if not already done"""
     if not os.path.exists(extract_dir):
         print(f"⬇️ Downloading zip from Google Drive ID: {file_id}")
         url = f"https://drive.google.com/uc?export=download&id={file_id}"
@@ -36,7 +38,6 @@ def download_and_unzip(file_id, zip_path, extract_dir):
         if r.status_code == 200:
             with open(zip_path, "wb") as f:
                 f.write(r.content)
-            print(f"✅ Downloaded {zip_path}")
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(extract_dir)
             print(f"✅ Extracted to {extract_dir}")
@@ -45,13 +46,11 @@ def download_and_unzip(file_id, zip_path, extract_dir):
     else:
         print(f"✅ Already exists at {extract_dir}")
 
-
-# --- Download + extract models ---
+# --- Download and extract models ---
 url_extract_dir = os.path.join(MODEL_DIR, "url_model")
 image_extract_dir = os.path.join(MODEL_DIR, "image_model")
 download_and_unzip(URL_MODEL_ID, os.path.join(MODEL_DIR, "url_model.zip"), url_extract_dir)
 download_and_unzip(IMAGE_MODEL_ID, os.path.join(MODEL_DIR, "image_model.zip"), image_extract_dir)
-
 
 # --- Load models ---
 url_model_path = os.path.join(url_extract_dir, "url_model.joblib")
@@ -76,8 +75,50 @@ except Exception as e:
     interpreter = None
     input_details = output_details = None
 
+# ============================================================
+#  Federated Reinforcement Feedback Logic
+# ============================================================
 
-# === URL scan ===
+def save_reward(data):
+    """Store reinforcement feedback from user votes"""
+    try:
+        if os.path.exists(REWARD_FILE):
+            with open(REWARD_FILE, "r") as f:
+                memory = json.load(f)
+        else:
+            memory = []
+        memory.append(data)
+        with open(REWARD_FILE, "w") as f:
+            json.dump(memory, f, indent=2)
+        print("🧠 Feedback stored:", data)
+    except Exception as e:
+        print("⚠️ Could not save reward:", e)
+
+def apply_reinforcement():
+    """Lightweight self-adjustment based on feedback"""
+    if not os.path.exists(REWARD_FILE) or url_model is None:
+        return
+    try:
+        with open(REWARD_FILE, "r") as f:
+            memory = json.load(f)
+        if not memory:
+            return
+        X = []
+        y = []
+        for entry in memory:
+            X.append(entry["features"])
+            y.append(1 if entry["phish"] else 0)
+        url_model.fit(np.array(X), np.array(y))
+        joblib.dump(url_model, url_model_path)
+        print(f"✅ Reinforcement update applied on {len(memory)} samples.")
+        os.remove(REWARD_FILE)
+    except Exception as e:
+        print("⚠️ Reinforcement failed:", e)
+
+# ============================================================
+# Prediction Routes
+# ============================================================
+
 def preprocess_url(url):
     url = url.lower()
     max_len = 200
@@ -85,7 +126,6 @@ def preprocess_url(url):
     if len(x) < max_len:
         x += [0] * (max_len - len(x))
     return np.array([x])
-
 
 @app.route("/scan/url", methods=["POST"])
 def scan_url():
@@ -96,16 +136,24 @@ def scan_url():
     if url_model is None:
         return jsonify({"error": "URL model not loaded"}), 500
 
-    try:
-        x = preprocess_url(url)
-        score = float(url_model.predict_proba(x)[0][1])
-    except Exception:
-        score = 0.5
+    x = preprocess_url(url)
+    score = float(url_model.predict_proba(x)[0][1])
     phishing = score > 0.5
     return jsonify({"score": score, "phishing": phishing})
 
+@app.route("/feedback/url", methods=["POST"])
+def feedback_url():
+    """User feedback: store as reinforcement reward"""
+    data = request.get_json()
+    url = data.get("url")
+    correct_label = data.get("phish")
+    if url is None or correct_label is None:
+        return jsonify({"error": "Missing parameters"}), 400
+    features = preprocess_url(url).tolist()[0]
+    save_reward({"features": features, "phish": correct_label})
+    apply_reinforcement()
+    return jsonify({"message": "Feedback received and applied"})
 
-# === Image scan ===
 @app.route("/scan/image", methods=["POST"])
 def scan_image():
     if "image" not in request.files:
@@ -118,21 +166,15 @@ def scan_image():
     x = image.img_to_array(img) / 255.0
     x = np.expand_dims(x, axis=0).astype(np.float32)
 
-    try:
-        interpreter.set_tensor(input_details[0]['index'], x)
-        interpreter.invoke()
-        score = float(interpreter.get_tensor(output_details[0]['index'])[0][0])
-    except Exception:
-        score = 0.5
+    interpreter.set_tensor(input_details[0]['index'], x)
+    interpreter.invoke()
+    score = float(interpreter.get_tensor(output_details[0]['index'])[0][0])
     phishing = score > 0.5
     return jsonify({"score": score, "phishing": phishing})
 
-
-# === Health check ===
 @app.route("/")
 def home():
-    return jsonify({"status": "running", "message": "Backend live & CORS-enabled"})
-
+    return jsonify({"status": "running", "message": "Backend live & self-learning enabled"})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
